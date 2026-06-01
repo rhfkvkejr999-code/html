@@ -1,83 +1,41 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>프리랜서 대시보드</title>
-
-<style>
-body{
-    font-family:sans-serif;
-    background:#f5f7fa;
-    margin:0;
-    padding:30px;
-}
-
-h1{
-    margin-bottom:30px;
-}
-
-.cards{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-    gap:20px;
-}
-
-.card{
-    background:white;
-    padding:20px;
-    border-radius:12px;
-    box-shadow:0 2px 10px rgba(0,0,0,.08);
-}
-
-.card h3{
-    margin:0;
-    color:#666;
-}
-
-.card p{
-    font-size:28px;
-    font-weight:bold;
-    margin-top:10px;
-}
-
-table{
-    width:100%;
-    background:white;
-    margin-top:30px;
-    border-collapse:collapse;
-}
-
-th,td{
-    padding:12px;
-    border-bottom:1px solid #ddd;
-}
-
-th{
-    background:#0f5d67;
-    color:white;
-}
-</style>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Surfhire Dashboard</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<h1>프리랜서 운영 대시보드</h1>
+<div class="container">
 
-<div class="cards" id="cards"></div>
+  <header>
+    <h1>🏄 Surfhire Dashboard</h1>
+    <p>프리랜서 운영 현황</p>
+  </header>
 
-<table>
-<thead>
-<tr>
-<th>Shop ID</th>
-<th>업체명</th>
-<th>배정건수</th>
-<th>총급여</th>
-<th>미지급금액</th>
-</tr>
-</thead>
-<tbody id="tableBody"></tbody>
-</table>
+  <section class="kpi-grid" id="kpiGrid"></section>
+
+  <section class="table-section">
+    <h2>샵별 지급 현황</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Shop ID</th>
+          <th>샵명</th>
+          <th>배정건수</th>
+          <th>총급여</th>
+          <th>미지급금액</th>
+        </tr>
+      </thead>
+      <tbody id="paymentTable"></tbody>
+    </table>
+
+  </section>
+
+</div>
 
 <script src="script.js"></script>
 

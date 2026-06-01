@@ -1,32 +1,46 @@
-const SHEET_URL =
+const KPI_URL =
 "https://opensheet.elk.sh/1ovUmy3PGl1zCvZlwJ4GUL4cIiYD_pDnMaDb3fK1BJdA/DashboardData";
 
-fetch(SHEET_URL)
-.then(res => res.json())
-.then(data => {
+const SHOP_URL =
+"https://opensheet.elk.sh/1ovUmy3PGl1zCvZlwJ4GUL4cIiYD_pDnMaDb3fK1BJdA/ShopPayments";
 
-    const cards = document.getElementById("cards");
+async function loadDashboard() {
 
-    cards.innerHTML = `
-        <div class="card">
-            <h3>총 프리랜서</h3>
-            <p>5명</p>
-        </div>
+  const kpiData = await fetch(KPI_URL).then(r => r.json());
+  const shopData = await fetch(SHOP_URL).then(r => r.json());
 
-        <div class="card">
-            <h3>활성 프리랜서</h3>
-            <p>4명</p>
-        </div>
+  renderKPI(kpiData);
+  renderTable(shopData);
 
-        <div class="card">
-            <h3>총 배정 건수</h3>
-            <p>3건</p>
-        </div>
+}
 
-        <div class="card">
-            <h3>지급 예정 금액</h3>
-            <p>₩458,000</p>
-        </div>
-    `;
+function renderKPI(data){
 
-});
+  const grid = document.getElementById("kpiGrid");
+
+  grid.innerHTML = data.map(item => `
+    <div class="card">
+      <div class="card-title">${item.KPI}</div>
+      <div class="card-value">${item.값}</div>
+    </div>
+  `).join("");
+
+}
+
+function renderTable(data){
+
+  const table = document.getElementById("paymentTable");
+
+  table.innerHTML = data.map(shop => `
+    <tr>
+      <td>${shop.shop_id}</td>
+      <td>${shop.샵명}</td>
+      <td>${shop.배정건수}</td>
+      <td>${shop.총급여}</td>
+      <td>${shop.미지급금액}</td>
+    </tr>
+  `).join("");
+
+}
+
+loadDashboard();
