@@ -39,5 +39,71 @@
 
 <script src="script.js"></script>
 
-</body>
+<div class="container">
+
+  <header>
+    <h1>🏄 Surfhire Dashboard</h1>
+    <p>프리랜서 운영 현황</p>
+  </header>
+
+  <section class="kpi-grid" id="kpiGrid"></section>
+
+  <div class="charts-grid">
+
+    <div class="chart-card">
+      <h2>예약 상태</h2>
+      <canvas id="bookingChart"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <h2>지역별 프리랜서</h2>
+      <canvas id="regionChart"></canvas>
+    </div>
+
+  </div>
+
+  <div class="chart-card">
+    <h2>샵별 급여 현황</h2>
+    <canvas id="payrollChart"></canvas>
+  </div>
+
+  <section class="table-section">
+    <h2>샵별 지급 현황</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Shop ID</th>
+          <th>샵명</th>
+          <th>배정건수</th>
+          <th>총급여</th>
+          <th>미지급금액</th>
+        </tr>
+      </thead>
+      <tbody id="paymentTable"></tbody>
+    </table>
+  </section>
+
+  <section class="table-section">
+    <h2>최근 예약 현황</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>예약번호</th>
+          <th>날짜</th>
+          <th>Shop</th>
+          <th>Role</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="bookingTable"></tbody>
+    </table>
+  </section>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="script.js"></script>
+
 </html>

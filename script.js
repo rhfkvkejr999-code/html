@@ -7,16 +7,16 @@ const urls = {
   shops: `https://opensheet.elk.sh/${SHEET_ID}/Shops`
 };
 
-function parseMoney(value) {
-  if (!value || value === "#N/A") return 0;
-  return Number(String(value).replace(/,/g, ""));
+function parseMoney(value){
+  if(!value || value === "#N/A") return 0;
+  return Number(String(value).replace(/,/g,""));
 }
 
-function formatMoney(value) {
+function formatMoney(value){
   return "₩" + value.toLocaleString("ko-KR");
 }
 
-async function loadDashboard() {
+async function loadDashboard(){
 
   const [
     freelancers,
@@ -24,138 +24,224 @@ async function loadDashboard() {
     payroll,
     shops
   ] = await Promise.all([
-    fetch(urls.freelancers).then(r => r.json()),
-    fetch(urls.bookings).then(r => r.json()),
-    fetch(urls.payroll).then(r => r.json()),
-    fetch(urls.shops).then(r => r.json())
+    fetch(urls.freelancers).then(r=>r.json()),
+    fetch(urls.bookings).then(r=>r.json()),
+    fetch(urls.payroll).then(r=>r.json()),
+    fetch(urls.shops).then(r=>r.json())
   ]);
 
   renderKPI(freelancers, bookings, payroll);
   renderShopTable(shops, bookings, payroll);
+  renderBookingTable(bookings, shops);
+
+  createBookingChart(bookings);
+  createRegionChart(freelancers);
+  createPayrollChart(shops, payroll);
 
 }
 
-function renderKPI(freelancers, bookings, payroll) {
+function renderKPI(freelancers, bookings, payroll){
 
-  const totalFreelancers = freelancers.length;
+  const active =
+    freelancers.filter(f=>f.상태==="활성").length;
 
-  const activeFreelancers =
-    freelancers.filter(f => f.상태 === "활성").length;
-
-  const totalBookings = bookings.length;
-
-  const completedBookings =
+  const completed =
     bookings.filter(
-      b =>
-        b.status === "Completed" ||
-        b.status === "Worked" ||
-        b.status === "Done"
+      b=>b.status==="Completed"
     ).length;
 
   const pendingPay =
     payroll
-      .filter(p => p.payment_status === "Pending")
+      .filter(p=>p.payment_status==="Pending")
       .reduce(
-        (sum, p) => sum + parseMoney(p.gross_pay),
+        (sum,p)=>sum+parseMoney(p.gross_pay),
         0
       );
 
   const totalPay =
     payroll.reduce(
-      (sum, p) => sum + parseMoney(p.gross_pay),
+      (sum,p)=>sum+parseMoney(p.gross_pay),
       0
     );
 
-  const kpis = [
-    {
-      title: "총 프리랜서 수",
-      value: totalFreelancers
-    },
-    {
-      title: "활성 프리랜서 수",
-      value: activeFreelancers
-    },
-    {
-      title: "총 배정 건수",
-      value: totalBookings
-    },
-    {
-      title: "완료 건수",
-      value: completedBookings
-    },
-    {
-      title: "지급 예정 총액",
-      value: formatMoney(pendingPay)
-    },
-    {
-      title: "누적 총급여",
-      value: formatMoney(totalPay)
-    }
+  const cards = [
+    ["👥 총 프리랜서", freelancers.length],
+    ["🟢 활성 인원", active],
+    ["📅 배정 건수", bookings.length],
+    ["✅ 완료 건수", completed],
+    ["💰 지급 예정", formatMoney(pendingPay)],
+    ["📈 누적 급여", formatMoney(totalPay)]
   ];
 
-  const grid = document.getElementById("kpiGrid");
-
-  grid.innerHTML = kpis.map(item => `
-    <div class="card">
-      <div class="card-title">${item.title}</div>
-      <div class="card-value">${item.value}</div>
-    </div>
-  `).join("");
+  document.getElementById("kpiGrid").innerHTML =
+    cards.map(card=>`
+      <div class="card">
+        <div class="card-title">${card[0]}</div>
+        <div class="card-value">${card[1]}</div>
+      </div>
+    `).join("");
 }
 
-function renderShopTable(shops, bookings, payroll) {
+function renderShopTable(shops, bookings, payroll){
 
-  const rows = shops.map(shop => {
+  const table =
+    document.getElementById("paymentTable");
+
+  table.innerHTML = shops.map(shop=>{
 
     const shopBookings =
       bookings.filter(
-        b => b.shop_id === shop.shop_id
+        b=>b.shop_id===shop.shop_id
       );
 
     const shopPayroll =
       payroll.filter(
-        p => p.shop_id === shop.shop_id
+        p=>p.shop_id===shop.shop_id
       );
 
     const totalPay =
       shopPayroll.reduce(
-        (sum, p) =>
-          sum + parseMoney(p.gross_pay),
+        (sum,p)=>sum+parseMoney(p.gross_pay),
         0
       );
 
     const unpaid =
       shopPayroll
         .filter(
-          p => p.payment_status === "Pending"
+          p=>p.payment_status==="Pending"
         )
         .reduce(
-          (sum, p) =>
-            sum + parseMoney(p.gross_pay),
+          (sum,p)=>sum+parseMoney(p.gross_pay),
           0
         );
 
-    return {
-      shopId: shop.shop_id,
-      shopName: shop.샵명,
-      bookingCount: shopBookings.length,
-      totalPay,
-      unpaid
-    };
+    return `
+      <tr>
+        <td>${shop.shop_id}</td>
+        <td>${shop.샵명}</td>
+        <td>${shopBookings.length}</td>
+        <td>${formatMoney(totalPay)}</td>
+        <td>${formatMoney(unpaid)}</td>
+      </tr>
+    `;
+
+  }).join("");
+}
+
+function renderBookingTable(bookings, shops){
+
+  const tbody =
+    document.getElementById("bookingTable");
+
+  tbody.innerHTML =
+    bookings.map(b=>{
+
+      const shop =
+        shops.find(
+          s=>s.shop_id===b.shop_id
+        );
+
+      return `
+      <tr>
+        <td>${b.booking_id}</td>
+        <td>${b.booking_date}</td>
+        <td>${shop?.샵명 || "-"}</td>
+        <td>${b.role}</td>
+        <td>
+          <span class="badge ${b.status.toLowerCase()}">
+            ${b.status}
+          </span>
+        </td>
+      </tr>
+      `;
+    }).join("");
+}
+
+function createBookingChart(bookings){
+
+  const counts = {};
+
+  bookings.forEach(b=>{
+    counts[b.status] =
+      (counts[b.status] || 0) + 1;
   });
 
-  const table =
-    document.getElementById("paymentTable");
-
-  table.innerHTML = rows.map(row => `
-    <tr>
-      <td>${row.shopId}</td>
-      <td>${row.shopName}</td>
-      <td>${row.bookingCount}</td>
-      <td>${formatMoney(row.totalPay)}</td>
-      <td>${formatMoney(row.unpaid)}</td>
-    </tr>
-  `).join("");
+  new Chart(
+    document.getElementById("bookingChart"),
+    {
+      type:"doughnut",
+      data:{
+        labels:Object.keys(counts),
+        datasets:[{
+          data:Object.values(counts)
+        }]
+      }
+    }
+  );
 }
+
+function createRegionChart(freelancers){
+
+  const counts = {};
+
+  freelancers.forEach(f=>{
+    counts[f["주 활동지역"]] =
+      (counts[f["주 활동지역"]] || 0)+1;
+  });
+
+  new Chart(
+    document.getElementById("regionChart"),
+    {
+      type:"pie",
+      data:{
+        labels:Object.keys(counts),
+        datasets:[{
+          data:Object.values(counts)
+        }]
+      }
+    }
+  );
+}
+
+function createPayrollChart(shops, payroll){
+
+  const labels = [];
+  const values = [];
+
+  shops.forEach(shop=>{
+
+    labels.push(shop.샵명);
+
+    const total =
+      payroll
+        .filter(
+          p=>p.shop_id===shop.shop_id
+        )
+        .reduce(
+          (sum,p)=>
+            sum+parseMoney(p.gross_pay),
+          0
+        );
+
+    values.push(total);
+
+  });
+
+  new Chart(
+    document.getElementById("payrollChart"),
+    {
+      type:"bar",
+      data:{
+        labels,
+        datasets:[{
+          label:"총 급여",
+          data:values
+        }]
+      }
+    }
+  );
+}
+
+setInterval(loadDashboard,30000);
 
 loadDashboard();
