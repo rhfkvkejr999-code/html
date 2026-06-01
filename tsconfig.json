@@ -11,7 +11,7 @@ function toNum(v: string) {
 }
 
 export async function getDashboardData(): Promise<DashboardPayload> {
-  const sheetId = process.env.1ovUmy3PGl1zCvZlwJ4GUL4cIiYD_pDnMaDb3fK1BJdA;
+  const sheetId = process.env.;
   const apiKey = process.env.AQ.-2UAom1g;
 
   if (!sheetId || !apiKey) throw new Error('환경변수가 없습니다.');
