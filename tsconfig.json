@@ -1,0 +1,36 @@
+export type DashboardPayload = {
+  cards: { title: string; value: string; sub: string; color: string }[];
+  rows: string[][];
+};
+
+const colors = ['#0f766e', '#2563eb', '#f59e0b', '#7c3aed'];
+
+function toNum(v: string) {
+  const n = Number(String(v || '').replace(/,/g, ''));
+  return Number.isFinite(n) ? n : 0;
+}
+
+export async function getDashboardData(): Promise<DashboardPayload> {
+  const sheetId = process.env.1ovUmy3PGl1zCvZlwJ4GUL4cIiYD_pDnMaDb3fK1BJdA;
+  const apiKey = process.env.AQ.-2UAom1g;
+
+  if (!sheetId || !apiKey) throw new Error('환경변수가 없습니다.');
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/DashboardData!B4:F16?key=${apiKey}`;
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error('구글시트 데이터를 불러오지 못했습니다.');
+
+  const json = await res.json();
+  const values: string[][] = json.values || [];
+
+  const kpiRows = values.slice(0, 6);
+  const cards = kpiRows.slice(0, 4).map((row, i) => ({
+    title: row?.[0] || `KPI ${i + 1}`,
+    value: row?.[1] || '0',
+    sub: row?.[2] || '',
+    color: colors[i % colors.length],
+  }));
+
+  const rows = values.slice(10, 12);
+  return { cards, rows };
+}
