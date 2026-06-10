@@ -3,107 +3,190 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Surfhire Dashboard</title>
+  <title>Surfhire Dashboard - 파트너</title>
   <link rel="stylesheet" href="style.css">
+  <!-- Google Fonts: Noto Sans KR (Korean) & Outfit (Modern English Numbers/Headings) -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <!-- Chart.js 라이브러리 추가 -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-<div class="container">
+  <!-- 1. 로그인 화면 -->
+  <div id="loginContainer" class="login-wrapper">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="logo-circle">🏄</div>
+        <h1>Surfhire 파트너</h1>
+        <p>가게별 대시보드 로그인</p>
+      </div>
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="input-group">
+          <label for="shopSelect">가게(샵) 선택</label>
+          <select id="shopSelect" required>
+            <option value="" disabled selected>가게를 로딩 중입니다...</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label for="passwordInput">비밀번호</label>
+          <input type="password" id="passwordInput" placeholder="초기 비밀번호: 0000" required autocomplete="current-password">
+        </div>
+        <div id="loginError" class="error-msg"></div>
+        <button type="submit" class="btn-primary">로그인</button>
+      </form>
+    </div>
+  </div>
 
-  <header>
-    <h1>🏄 Surfhire Dashboard</h1>
-    <p>프리랜서 운영 현황</p>
-  </header>
+  <!-- 2. 대시보드 화면 (로그인 후 노출) -->
+  <div id="dashboardContainer" class="container" style="display: none;">
+    
+    <!-- 대시보드 상단 바 -->
+    <header class="dashboard-header">
+      <div class="header-left">
+        <h1 id="shopTitle">🏄 Surfhire Dashboard</h1>
+        <p>가게 운영 및 프리랜서 정산 현황</p>
+      </div>
+      <div class="header-right">
+        <button onclick="openPasswordModal()" class="btn-secondary">🔒 비밀번호 변경</button>
+        <button onclick="handleLogout()" class="btn-danger">🚪 로그아웃</button>
+      </div>
+    </header>
 
-  <section class="kpi-grid" id="kpiGrid"></section>
+    <!-- 가게 상세 프로필 카드 -->
+    <section class="shop-profile-card">
+      <div class="profile-header">
+        <h3>🏪 매장 정보 프로필</h3>
+        <span class="badge active-badge" id="profileStatus">운영중</span>
+      </div>
+      <div class="profile-grid">
+        <div class="profile-item">
+          <span class="label">대표자명</span>
+          <span class="value" id="profileOwner">-</span>
+        </div>
+        <div class="profile-item">
+          <span class="label">연락처</span>
+          <span class="value" id="profileContact">-</span>
+        </div>
+        <div class="profile-item">
+          <span class="label">이메일</span>
+          <span class="value" id="profileEmail">-</span>
+        </div>
+        <div class="profile-item">
+          <span class="label">지역</span>
+          <span class="value" id="profileRegion">-</span>
+        </div>
+        <div class="profile-item">
+          <span class="label">정산일</span>
+          <span class="value" id="profileSettlementDate">-</span>
+        </div>
+      </div>
+    </section>
 
-  <section class="table-section">
-    <h2>샵별 지급 현황</h2>
+    <!-- KPI 메트릭스 그리드 -->
+    <section class="kpi-grid" id="kpiGrid"></section>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Shop ID</th>
-          <th>샵명</th>
-          <th>배정건수</th>
-          <th>총급여</th>
-          <th>미지급금액</th>
-        </tr>
-      </thead>
-      <tbody id="paymentTable"></tbody>
-    </table>
-
-  </section>
-
-</div>
-
-<script src="script.js"></script>
-
-<div class="container">
-
-  <header>
-    <h1>🏄 Surfhire Dashboard</h1>
-    <p>프리랜서 운영 현황</p>
-  </header>
-
-  <section class="kpi-grid" id="kpiGrid"></section>
-
-  <div class="charts-grid">
-
-    <div class="chart-card">
-      <h2>예약 상태</h2>
-      <canvas id="bookingChart"></canvas>
+    <!-- 차트 영역 -->
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h2>예약 상태 비율</h2>
+        <div class="chart-container">
+          <canvas id="bookingChart"></canvas>
+        </div>
+      </div>
+      
+      <div class="chart-card">
+        <h2>프리랜서 역할 분포</h2>
+        <div class="chart-container">
+          <canvas id="roleChart"></canvas>
+        </div>
+      </div>
     </div>
 
-    <div class="chart-card">
-      <h2>지역별 프리랜서</h2>
-      <canvas id="regionChart"></canvas>
+    <!-- 프리랜서별 급여 현황 차트 -->
+    <div class="chart-card full-width">
+      <h2>프리랜서별 급여 정산 합계</h2>
+      <div class="chart-container payroll-chart-container">
+        <canvas id="payrollChart"></canvas>
+      </div>
     </div>
+
+    <!-- 샵 급여 정산 상세 현황 -->
+    <section class="table-section">
+      <h2>급여 정산 상세 현황</h2>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>정산 ID</th>
+              <th>예약 ID</th>
+              <th>프리랜서명</th>
+              <th>역할</th>
+              <th>근무시간</th>
+              <th>기본시급</th>
+              <th>총 급여</th>
+              <th>정산 상태</th>
+              <th>메모</th>
+            </tr>
+          </thead>
+          <tbody id="paymentTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 최근 예약 현황 -->
+    <section class="table-section">
+      <h2>최근 예약 현황</h2>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>예약번호</th>
+              <th>예약일자</th>
+              <th>시간</th>
+              <th>프리랜서명</th>
+              <th>역할</th>
+              <th>강습타입</th>
+              <th>인원수</th>
+              <th>상태</th>
+            </tr>
+          </thead>
+          <tbody id="bookingTable"></tbody>
+        </table>
+      </div>
+    </section>
 
   </div>
 
-  <div class="chart-card">
-    <h2>샵별 급여 현황</h2>
-    <canvas id="payrollChart"></canvas>
+  <!-- 3. 비밀번호 변경 모달 -->
+  <div id="passwordModal" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>🔒 비밀번호 변경</h2>
+        <button onclick="closePasswordModal()" class="btn-close">&times;</button>
+      </div>
+      <form id="passwordForm" onsubmit="handleChangePassword(event)">
+        <div class="input-group">
+          <label for="currentPassword">현재 비밀번호</label>
+          <input type="password" id="currentPassword" required autocomplete="current-password">
+        </div>
+        <div class="input-group">
+          <label for="newPassword">새 비밀번호</label>
+          <input type="password" id="newPassword" placeholder="새로운 비밀번호 입력" required autocomplete="new-password">
+        </div>
+        <div class="input-group">
+          <label for="newPasswordConfirm">새 비밀번호 확인</label>
+          <input type="password" id="newPasswordConfirm" placeholder="새로운 비밀번호 재입력" required autocomplete="new-password">
+        </div>
+        <div id="passwordError" class="error-msg"></div>
+        <div id="passwordSuccess" class="success-msg"></div>
+        <div class="modal-footer">
+          <button type="button" onclick="closePasswordModal()" class="btn-secondary">취소</button>
+          <button type="submit" class="btn-primary">변경하기</button>
+        </div>
+      </form>
+    </div>
   </div>
 
-  <section class="table-section">
-    <h2>샵별 지급 현황</h2>
-
-    <table>
-      <thead>
-        <tr>
-          <th>Shop ID</th>
-          <th>샵명</th>
-          <th>배정건수</th>
-          <th>총급여</th>
-          <th>미지급금액</th>
-        </tr>
-      </thead>
-      <tbody id="paymentTable"></tbody>
-    </table>
-  </section>
-
-  <section class="table-section">
-    <h2>최근 예약 현황</h2>
-
-    <table>
-      <thead>
-        <tr>
-          <th>예약번호</th>
-          <th>날짜</th>
-          <th>Shop</th>
-          <th>Role</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody id="bookingTable"></tbody>
-    </table>
-  </section>
-
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="script.js"></script>
-
+  <script src="script.js"></script>
+</body>
 </html>
