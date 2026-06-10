@@ -1,7 +1,7 @@
 const SHEET_ID = "1ovUmy3PGl1zCvZlwJ4GUL4cIiYD_pDnMaDb3fK1BJdA";
 
 // Google Apps Script 웹 앱 URL (이메일 발송 백엔드)
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxSFcL2xCtKPzzyAI2ZtiyzJtFItKoCeeYGkQX-4zM5q73YLCFkP5iW363WdEjrEv5O/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx9KLfiEkakgZOSGJwrjzgspuJt1XskOUiQ0oPAfF_jqjdtdWZfmkbk6Ex3_2Qwf9Sq/exec";
 
 const urls = {
   freelancers: `https://opensheet.elk.sh/${SHEET_ID}/Freelancers`,
