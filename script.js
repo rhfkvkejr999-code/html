@@ -1,5 +1,8 @@
 const SHEET_ID = "1ovUmy3PGl1zCvZlwJ4GUL4cIiYD_pDnMaDb3fK1BJdA";
 
+// Google Apps Script 웹 앱 URL (이메일 발송 백엔드)
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxSFcL2xCtKPzzyAI2ZtiyzJtFItKoCeeYGkQX-4zM5q73YLCFkP5iW363WdEjrEv5O/exec";
+
 const urls = {
   freelancers: `https://opensheet.elk.sh/${SHEET_ID}/Freelancers`,
   bookings: `https://opensheet.elk.sh/${SHEET_ID}/Bookings`,
@@ -219,14 +222,19 @@ function renderShopPayrollTable(shopPayroll, freelancers) {
   const tbody = document.getElementById("paymentTable");
   
   if (shopPayroll.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">조회된 정산 내역이 없습니다.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-muted);">조회된 정산 내역이 없습니다.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = shopPayroll.map(p => {
     const freelancer = freelancers.find(f => f.freelancer_id === p.freelancer_id);
     const flName = freelancer ? freelancer.이름 : p.freelancer_id || "-";
+    const flEmail = freelancer ? (freelancer.이메일 || "") : "";
     const statusClass = p.payment_status ? p.payment_status.toLowerCase() : "";
+    // 메일 발송 버튼: 이메일이 없거나 정산 미완료(Pending)면 비활성화
+    const hasEmail = flEmail.trim() !== "";
+    const isPaid = p.payment_status && p.payment_status.toLowerCase() === "completed";
+    const btnDisabled = (!hasEmail || !isPaid) ? "disabled title=\"" + (!hasEmail ? "프리랜서 이메일 미등록" : "정산 완료(Completed) 상태에서만 발송 가능") + "\"" : "";
 
     return `
       <tr>
@@ -239,6 +247,13 @@ function renderShopPayrollTable(shopPayroll, freelancers) {
         <td><strong>${p.gross_pay ? formatMoney(parseMoney(p.gross_pay)) : "₩0"}</strong></td>
         <td><span class="badge ${statusClass}">${p.payment_status || "-"}</span></td>
         <td>${p.memo || "-"}</td>
+        <td>
+          <button
+            class="btn-email-send"
+            ${btnDisabled}
+            onclick="sendPayrollEmailHandler('${p.payroll_id}')"
+          >📧 메일 발송</button>
+        </td>
       </tr>
     `;
   }).join("");
@@ -484,7 +499,7 @@ function handleChangePassword(event) {
   // 1. 현재 비밀번호 검증
   const savedPassword = localStorage.getItem(`shop_pwd_${currentShop.shop_id}`) || "0000";
   if (currentPwdInput !== savedPassword) {
-    errorDiv.textContent = "현재 비밀번호가 일체하지 않습니다.";
+    errorDiv.textContent = "현재 비밀번호가 일치하지 않습니다.";
     return;
   }
 
@@ -508,6 +523,122 @@ function handleChangePassword(event) {
   setTimeout(() => {
     closePasswordModal();
   }, 1500);
+}
+
+// -------------------------------------------------------------
+// 📧 급여 정산 완료 메일 발송 핸들러
+// -------------------------------------------------------------
+
+async function sendPayrollEmailHandler(payrollId) {
+  // 정산 레코드 조회
+  const payroll = allPayroll.find(p => p.payroll_id === payrollId);
+  if (!payroll) {
+    alert('정산 내역을 찾을 수 없습니다.');
+    return;
+  }
+
+  // 프리랜서 정보 조회
+  const freelancer = allFreelancers.find(f => f.freelancer_id === payroll.freelancer_id);
+  if (!freelancer || !freelancer.이메일) {
+    alert('프리랜서의 이메일 주소가 등록되어 있지 않습니다.');
+    return;
+  }
+
+  // 예약 정보 조회 (근무 일자/시간 등 가져오기)
+  const booking = allBookings.find(b => b.booking_id === payroll.booking_id) || {};
+
+  // 현재 로그인한 샵 정보
+  const shopName = currentShop ? currentShop.샵명 : (payroll.shop_id || '-');
+
+  // 발송 확인 다이얼로그
+  const confirmMsg = [
+    `프리랜서: ${freelancer.이름}`,
+    `수신 이메일: ${freelancer.이메일}`,
+    `근무 일자: ${booking.booking_date || '-'}`,
+    `지급 총액: ${payroll.gross_pay || '-'}`,
+    '',
+    '위 주소로 급여 지급 완료 메일을 발송하시겠습니까?'
+  ].join('\n');
+
+  if (!confirm(confirmMsg)) return;
+
+  // 발송 버튼 UI 상태 변경 (비활성화)
+  const btn = document.querySelector(`button[onclick="sendPayrollEmailHandler('${payrollId}')"]`);
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '발송 중...';
+  }
+
+  // Apps Script API 호출 (GET 방식 - CORS 문제 없이 동작)
+  const params = new URLSearchParams({
+    action: 'sendPayrollEmail',
+    freelancerEmail: freelancer.이메일,
+    freelancerName: freelancer.이름,
+    shopName: shopName,
+    bookingDate: booking.booking_date || '-',
+    startTime: booking.start_time || '-',
+    endTime: booking.end_time || '-',
+    role: payroll.role || '-',
+    lessonType: booking.lesson_type || '-',
+    headcount: booking.headcount || '-',
+    workedHours: payroll.worked_hours || '-',
+    baseRate: payroll.base_rate || '-',
+    grossPay: payroll.gross_pay || '-',
+    paymentDate: payroll.payment_date || '-',
+    payrollId: payroll.payroll_id || '-',
+    memo: payroll.memo || '-'
+  });
+
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`);
+    const result = await res.json();
+
+    if (result.success) {
+      showEmailToast(`✅ ${freelancer.이름} 강사님에게 메일을 성공적으로 발송했습니다.`, 'success');
+      if (btn) {
+        btn.textContent = '✅ 발송 완료';
+        btn.style.background = 'var(--success)';
+        btn.style.color = 'white';
+      }
+    } else {
+      throw new Error(result.message || '알 수 없는 오류');
+    }
+  } catch (err) {
+    showEmailToast(`❌ 메일 발송 실패: ${err.message}`, 'error');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '📧 메일 발송';
+    }
+  }
+}
+
+// 토스트 알림 (이메일 발송 전용)
+function showEmailToast(message, type) {
+  // 기존 토스트 제거
+  const existing = document.getElementById('emailToast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'emailToast';
+  toast.style.cssText = `
+    position: fixed; bottom: 30px; right: 30px; z-index: 9999;
+    padding: 14px 20px; border-radius: 12px; font-size: 14px; font-weight: 600;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    background: ${type === 'success' ? '#ecfdf5' : '#fef2f2'};
+    color: ${type === 'success' ? '#065f46' : '#991b1b'};
+    border: 1px solid ${type === 'success' ? '#6ee7b7' : '#fca5a5'};
+    animation: slideUpFade 0.3s ease-out forwards;
+    max-width: 360px;
+  `;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(10px)';
+    toast.style.transition = 'all 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 5000);
 }
 
 // 30초마다 데이터 자동 리프레시 (로그인된 상태에서만 작동)

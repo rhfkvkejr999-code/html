@@ -603,6 +603,36 @@ tr:hover td {
   }
 }
 
+/* Email Send Button */
+
+.btn-email-send {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid #3b82f6;
+  background: #eff6ff;
+  color: #2563eb;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-email-send:hover:not(:disabled) {
+  background: #3b82f6;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2);
+}
+
+.btn-email-send:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
 /* -------------------------------------------------------------
  * 5. Media Queries
  * ------------------------------------------------------------- */
