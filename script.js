@@ -569,8 +569,8 @@ async function sendPayrollEmailHandler(payrollId) {
     btn.textContent = '발송 중...';
   }
 
-  // Apps Script API 호출 (GET 방식 - CORS 문제 없이 동작)
-  const params = new URLSearchParams({
+  // Apps Script API 호출 - JSONP 방식으로 CORS 우회
+  const params = {
     action: 'sendPayrollEmail',
     freelancerEmail: freelancer.이메일,
     freelancerName: freelancer.이름,
@@ -587,11 +587,10 @@ async function sendPayrollEmailHandler(payrollId) {
     paymentDate: payroll.payment_date || '-',
     payrollId: payroll.payroll_id || '-',
     memo: payroll.memo || '-'
-  });
+  };
 
   try {
-    const res = await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`);
-    const result = await res.json();
+    const result = await jsonpRequest(APPS_SCRIPT_URL, params);
 
     if (result.success) {
       showEmailToast(`✅ ${freelancer.이름} 강사님에게 메일을 성공적으로 발송했습니다.`, 'success');
@@ -610,6 +609,46 @@ async function sendPayrollEmailHandler(payrollId) {
       btn.textContent = '📧 메일 발송';
     }
   }
+}
+
+// -------------------------------------------------------------
+// JSONP 헬퍼 함수 - CORS 없이 Google Apps Script API 호출
+// script 태그를 동적으로 생성하여 브라우저 CORS 정책을 우회합니다.
+// -------------------------------------------------------------
+function jsonpRequest(url, params) {
+  return new Promise((resolve, reject) => {
+    // 고유한 콜백 함수명 생성 (충돌 방지)
+    const callbackName = 'surfhire_cb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+    params.callback = callbackName;
+
+    const script = document.createElement('script');
+    script.src = url + '?' + new URLSearchParams(params).toString();
+
+    // 15초 타임아웃 가드
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error('요청 시간이 초과되었습니다 (15초). Apps Script 배포 상태를 확인해 주세요.'));
+    }, 15000);
+
+    function cleanup() {
+      clearTimeout(timer);
+      delete window[callbackName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    // Apps Script가 호출할 전역 콜백 함수 등록
+    window[callbackName] = function(data) {
+      cleanup();
+      resolve(data);
+    };
+
+    script.onerror = function() {
+      cleanup();
+      reject(new Error('스크립트 로드 실패. Apps Script URL 또는 배포 설정을 확인해 주세요.'));
+    };
+
+    document.head.appendChild(script);
+  });
 }
 
 // 토스트 알림 (이메일 발송 전용)
